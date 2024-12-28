@@ -1,0 +1,23 @@
+
+CondaError: Run 'conda init' before 'conda activate'
+
+/scratch/knagiredla/robonet/envs/robot_env.py:136: RuntimeWarning: invalid value encountered in double_scalars
+  self.start = self.bone_start + vec * (self.ext_start / np.linalg.norm(vec))
+Traceback (most recent call last):
+  File "./tasks/train_gfn.py", line 617, in <module>
+    main()
+  File "./tasks/train_gfn.py", line 613, in main
+    trial.run()
+  File "./tasks/train_gfn.py", line 454, in run
+    batch = next(train_dl_iter)
+  File "/scratch/knagiredla/robonet/train.py", line 387, in cycle
+    for i in it:
+  File "/home/knagiredla/.conda/envs/gfn_sb3_gpu/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 628, in __next__
+    data = self._next_data()
+  File "/home/knagiredla/.conda/envs/gfn_sb3_gpu/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 671, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/knagiredla/.conda/envs/gfn_sb3_gpu/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 43, in fetch
+    data = next(self.dataset_iter)
+  File "/scratch/knagiredla/robonet/data/sampling_iterator.py", line 244, in __iter__
+    pred_reward[valid_idcs - num_offline] = online_flat_rew
+RuntimeError: shape mismatch: value tensor of shape [0, 1] cannot be broadcast to indexing result of shape [5, 1]

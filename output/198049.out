@@ -1,0 +1,31 @@
+no change     /sw/software/Anaconda3/2024.02/condabin/conda
+no change     /sw/software/Anaconda3/2024.02/bin/conda
+no change     /sw/software/Anaconda3/2024.02/bin/conda-env
+no change     /sw/software/Anaconda3/2024.02/bin/activate
+no change     /sw/software/Anaconda3/2024.02/bin/deactivate
+no change     /sw/software/Anaconda3/2024.02/etc/profile.d/conda.sh
+no change     /sw/software/Anaconda3/2024.02/etc/fish/conf.d/conda.fish
+no change     /sw/software/Anaconda3/2024.02/shell/condabin/Conda.psm1
+no change     /sw/software/Anaconda3/2024.02/shell/condabin/conda-hook.ps1
+no change     /sw/software/Anaconda3/2024.02/lib/python3.11/site-packages/xontrib/conda.xsh
+no change     /sw/software/Anaconda3/2024.02/etc/profile.d/conda.csh
+no change     /home/knagiredla/.bashrc
+No action taken.
+robots_list, ./results/gen_robots_list_swimmer.txt
+results_path, ./results
+env_id, Swimmer-v5
+num_timesteps, 30000000
+scripts, python ./tasks/ppo_eval.py
+ctrl_cost_weight, 0.0005
+expt_name, swimmer
+args.rews_path /scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_swimmer_50_000_134_1734610818/policies/rew_modified.json
+**************************************************************
+Path ./test
+args1 ./results/gen_robots_list_swimmer.txt
+args2 ./results
+args3 Swimmer-v5
+args4 30000000
+args5 python ./tasks/ppo_eval.py
+args6 0.0005
+args7 swimmer
+out of call_train_script

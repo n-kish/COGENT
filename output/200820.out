@@ -1,0 +1,18 @@
+robots_list, ./results/gen_robots_list_hopper_flat.txt
+results_path, ./results
+env_id, Hopper-v5
+num_timesteps, 20000000
+scripts, python ./tasks/ppo_eval.py
+ctrl_cost_weight, 0.0005
+expt_name, hopper_flat
+args.rews_path /scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_hopper_50_000_134_1734445021/policies/rew_modified.json
+**************************************************************
+Path ./test
+args1 ./results/gen_robots_list_hopper_flat.txt
+args2 ./results
+args3 Hopper-v5
+args4 20000000
+args5 python ./tasks/ppo_eval.py
+args6 0.0005
+args7 hopper_flat
+out of call_train_script

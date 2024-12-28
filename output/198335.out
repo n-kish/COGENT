@@ -1,0 +1,84 @@
+Env: ./assets/base_hopper_gap.xml
+self.action_map [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1), (2, 2), (2, 3), (3, 0), (3, 1), (3, 2), (3, 3), (4, 0), (4, 1), (4, 2), (4, 3), (5, 0), (5, 1), (5, 2), (5, 3), (6, 0), (6, 1), (6, 2), (6, 3), (7, 0), (7, 1), (7, 2), (7, 3), (8, 0), (8, 1), (8, 2), (8, 3), (9, 0), (9, 1), (9, 2), (9, 3), (10, 0), (10, 1), (10, 2), (10, 3), (11, 0), (11, 1), (11, 2), (11, 3), (12, 0), (12, 1), (12, 2), (12, 3), (13, 0), (13, 1), (13, 2), (13, 3), (14, 0), (14, 1), (14, 2), (14, 3), (15, 0), (15, 1), (15, 2), (15, 3), (16, 0), (16, 1), (16, 2), (16, 3), (17, 0), (17, 1), (17, 2), (17, 3), (18, 0), (18, 1), (18, 2), (18, 3), (19, 0), (19, 1), (19, 2), (19, 3), (20, 0), (20, 1), (20, 2), (20, 3), (21, 0), (21, 1), (21, 2), (21, 3), (22, 0), (22, 1), (22, 2), (22, 3), (23, 0), (23, 1), (23, 2), (23, 3), (24, 0), (24, 1), (24, 2), (24, 3)]
+
+
+Hyperparameters:
+--------------------------------------------------
+Z_learning_rate                         :	(float)   	0.001
+Z_lr_decay                              :	(int)     	50000
+adam_eps                                :	(float)   	1e-08
+algo                                    :	(str)     	TB
+bootstrap_own_reward                    :	(bool)    	False
+clip_grad_param                         :	(int)     	10
+clip_grad_type                          :	(str)     	norm
+ctrl_cost_weight                        :	(float)   	0.0005
+env                                     :	(str)     	hopper
+env_id                                  :	(str)     	Hopper-v5
+env_terrain                             :	(str)     	gap
+epochs                                  :	(int)     	10
+exp_method                              :	(str)     	GSCA
+global_batch_size                       :	(int)     	5
+gum_beta                                :	(float)   	0.0
+hostname                                :	(str)     	cpu-f-04
+illegal_action_logreward                :	(int)     	-75
+init_data_iters                         :	(int)     	150
+lastbatch_rl_timesteps                  :	(str)     	1000000
+learning_rate                           :	(float)   	0.0001
+log_dir                                 :	(str)     	/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415
+lr_decay                                :	(int)     	20000
+max_nodes                               :	(int)     	5
+momentum                                :	(float)   	0.9
+mp_pickle_messages                      :	(bool)    	False
+num_data_loader_workers                 :	(int)     	0
+num_emb                                 :	(int)     	128
+num_final_gen_steps                     :	(int)     	1
+num_layers                              :	(int)     	4
+num_thermometer_dim                     :	(int)     	32
+num_training_steps                      :	(int)     	500
+offline_ratio                           :	(float)   	0.5
+overwrite_existing_exp                  :	(bool)    	True
+qm9_h5_path                             :	(str)     	/data/chem/qm9/qm9.h5
+random_action_prob                      :	(int)     	0
+replay_buffer_size                      :	(int)     	750
+replay_buffer_warmup                    :	(int)     	750
+resource_per_link                       :	(str)     	1000000
+reward_loss_multiplier                  :	(int)     	1
+rl_timesteps                            :	(str)     	1000000
+sampling_tau                            :	(float)   	0.99
+seed                                    :	(int)     	134
+start_point                             :	(str)     	base
+tb_epsilon                              :	(NoneType)	None
+tb_p_b_is_parameterized                 :	(bool)    	False
+temperature_dist_params                 :	(tuple)   	(0.0, 64.0)
+temperature_sample_dist                 :	(str)     	uniform
+use_replay_buffer                       :	(bool)    	True
+valid_random_action_prob                :	(float)   	0.0
+validate_every                          :	(int)     	100
+weight_decay                            :	(float)   	1e-08
+xml_path                                :	(str)     	/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/xmlrobots
+--------------------------------------------------
+
+
+---Built training data loader in 0.0009055137634277344 seconds ---
+23/12/2024 22:46:55 - INFO - logger - Starting training
+Updated max_nodes to 3 at iteration 1
+iteration from exception 0
+gum_beta 10.0
+Received graph <[0, 1, 2], [(0, 1), (0, 2)], [2, 1, 0, 3] <class 'envs.graph_building_env.Graph'>
+ $$$$$$$ XML robot: Success /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_4250000.0_1734963218.xml
+Received graph <[0, 1, 2], [(0, 1), (1, 2)], [1, 0, 3, 0] <class 'envs.graph_building_env.Graph'>
+ $$$$$$$ XML robot: Success /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_3500000.0_1734959146.xml
+Received graph <[0, 1, 2], [(0, 1), (1, 2)], [3, 3, 1, 0] <class 'envs.graph_building_env.Graph'>
+ $$$$$$$ XML robot: Success /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_3250000.0_1734957313.xml
+Received graph <[0, 1, 2], [(0, 1), (1, 2)], [3, 2, 1, 0] <class 'envs.graph_building_env.Graph'>
+ $$$$$$$ XML robot: Success /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_3250000.0_1734956850.xml
+Received graph <[0, 1, 2], [(0, 1), (1, 2)], [3, 2, 0, 0] <class 'envs.graph_building_env.Graph'>
+ $$$$$$$ XML robot: Success /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_4000000.0_1734958516.xml
+Error processing robot /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_4250000.0_1734958531.xml: [Errno 2] No such file or directory: '/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/policies/rews.json'
+Error processing robot /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_3500000.0_1734957976.xml: [Errno 2] No such file or directory: '/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/policies/rews.json'
+Error processing robot /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_3250000.0_1734959123.xml: [Errno 2] No such file or directory: '/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/policies/rews.json'
+Error processing robot /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_3250000.0_1734961016.xml: [Errno 2] No such file or directory: '/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/policies/rews.json'
+Error processing robot /home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/train/robot_3_4000000.0_1734955933.xml: [Errno 2] No such file or directory: '/home/knagiredla/robonet/logs/exp_GSCA_5_gap_base_hopper_1_000_000_134_1734954415/policies/rews.json'
+eprewmeans [0.0, 0.0, 0.0, 0.0, 0.0]
+Number of invalid robots: 5
+Max value & mean, median, std.dev N/A 0 0 0
