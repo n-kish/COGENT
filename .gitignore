@@ -1,14 +1,15 @@
 # Logs
-*.log
-*.wandb
-*.output
-*.txt
 logs/
 results/
 eval_out/
 .vscode/
 out/
 output/
+*.txt
+
+
+bengio2021flow.py
+graph_transformer.py
 
 
 # pycache
@@ -18,7 +19,6 @@ data/__pycache__/
 envs/__pycache__/
 models/__pycache__/
 utils/__pycache__/
-
 
 
 # test

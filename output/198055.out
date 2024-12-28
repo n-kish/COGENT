@@ -1,7 +1,0 @@
-robots_list, ./results/gen_robots_list_swimmer.txt
-results_path, ./results
-env_id, Swimmer-v5
-num_timesteps, 30000000
-scripts, python ./tasks/ppo_eval.py
-ctrl_cost_weight, 0.0005
-expt_name, swimmer

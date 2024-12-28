@@ -1,5 +1,0 @@
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_swimmer_50_000_134_1734610818/train/robot_2_125000.0_1734632384.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_swimmer_50_000_134_1734610818/train/robot_2_112500.0_1734660276.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_swimmer_50_000_134_1734610818/train/robot_2_125000.0_1734638348.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_swimmer_50_000_134_1734610818/train/robot_2_125000.0_1734621826.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_flat_base_swimmer_50_000_134_1734610818/train/robot_3_175000.0_1734642095.xml

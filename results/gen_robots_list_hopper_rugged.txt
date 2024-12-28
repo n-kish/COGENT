@@ -1,5 +1,0 @@
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_rugged_base_hopper_50_000_134_1734445249/train/robot_1_62500.0_1734459559.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_rugged_base_hopper_50_000_134_1734445249/train/robot_1_62500.0_1734459454.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_rugged_base_hopper_50_000_134_1734445249/train/robot_1_62500.0_1734479656.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_rugged_base_hopper_50_000_134_1734445249/train/robot_1_62500.0_1734485029.xml
-/scratch/knagiredla/robonet/logs/exp_GSCA_5_rugged_base_hopper_50_000_134_1734445249/valid/robot_5_150000_1734571306.xml
