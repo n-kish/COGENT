@@ -26,7 +26,34 @@ COGENT framework can be broadly divided into two main stages, as depicted in the
 
 * **Generator**: The Generator is responsible for proposing a batch of 'm' diverse robot designs, each represented as a graph. Starting from initial states, the generator incrementally constructs each of the m graphs by iteratively applying Graph Actions (AddNode, AddEdge, STOP) selected from a defined action space. These actions are guided by the learned forward policy, which is influenced by our annealing exploration strategy. The process continues independently for each graph in the batch until a STOP action is sampled, yielding m complete robot design graphs.
 
-* **Evaluator**: The Evaluator takes the batch of m generated robot design graphs and assesses their potential task performance. Firstly, these graph representations are converted into a format suitable for simulation, such as XML, representing the robot's structure. These robots are then instantiated within a physics simulator, where their behavior policies are trained using an policy optimization algorithm (like PPO) for a specified number of timesteps. The performance achieved during this training is then processed by our proposed techniques: Rate-based Prioritization and Cost-Aware Sampling. These techniques modify the raw simulation reward to produce a composite reward that incorporates factors beyond just final performance, reflecting the potential for improvement and the computational cost of evaluation. This composite reward is then used to update the Generator's design policy and the partition function via the TB objective, closing the loop.
+* **Evaluator**: The Evaluator takes the batch of m generated robot design graphs and assesses their potential task performance. Firstly, these graph representations are converted into a format suitable for simulation, such as XML, representing the robot's structure. These robots are then instantiated within a physics simulator, where their behavior policies are trained using an policy optimization algorithm (like PPO) for a specified number of timesteps. The performance achieved during this training is then processed by our proposed techniques: (i) Performance Rate-based Prioritization and (ii) Cost-Aware Sampling. These techniques modify the raw simulation reward to produce a composite reward that incorporates factors beyond just final performance, reflecting the potential for improvement and the computational cost of evaluation. This composite reward is then used to update the Generator's design policy and the partition function via the TB objective, closing the loop.
+
+## 📊 Results
+COGENT generated top-4 diverse designs in the BridgeWalker environment in EvoGym simulator.
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <video src="assets/videos/video1.mp4" width="100%" controls></video>
+        <p><em>COGENT's Top Design 1</em></p>
+      </td>
+      <td align="center">
+        <video src="assets/videos/video2.mp4" width="100%" controls></video>
+        <p><em>COGENT's Top Design 2</em></p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <video src="assets/videos/video3.mp4" width="100%" controls></video>
+        <p><em>COGENT's Top Design 3</em></p>
+      </td>
+      <td align="center">
+        <video src="assets/videos/video4.mp4" width="100%" controls></video>
+        <p><em>COGENT's Top Design 4</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ## 🛠️ Setup
 Let's start with python 3.10. It's recommend to create a `conda` env:
