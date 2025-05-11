@@ -12,8 +12,8 @@ import envs.robot_env
 
 
 def beta_decay(iteration, beta_init):
-    iter_window = 150
-    decay_step_size = 120
+    iter_window = 25
+    decay_step_size = 15.66 # to achieve 0.01 beta at 100 iterations
     if iteration > iter_window:
         alpha = 0
     else: 
@@ -60,7 +60,7 @@ class GraphSampler:
         self.pad_with_terminal_state = pad_with_terminal_state
 
     def sample_from_model(
-        self, model: nn.Module, xml_dir: str, log_dir:str, is_final_sample, n: int, exp_method, min_resource, cond_info: Tensor, dev: torch.device, env_id: str, random_action_prob: float = 0.0):
+        self, model: nn.Module, xml_dir: str, log_dir:str, is_final_sample, n: int, exp_method, min_resource, cond_info: Tensor, dev: torch.device, env_id: str, random_action_prob: float = 0.0, gum_beta: float = None):
         """Samples a model in a minibatch
 
         Parameters
@@ -180,6 +180,8 @@ class GraphSampler:
                 # exit()
             # print("fwd_cat", fwd_cat)
             graph_actions = [self.ctx.aidx_to_GraphAction(g, a) for g, a in zip(torch_graphs, actions)]
+            
+            
             # print("graph_actions", graph_actions, len(graph_actions))
             # print("grah_action0", graph_actions[0], graph_actions[0].action)
             # print("Value, source, target", graph_actions[0].value, graph_actions[0].source, graph_actions[0].target)

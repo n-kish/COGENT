@@ -98,7 +98,7 @@ def write_robots_to_file(robots, filename="robots_list.txt"):
             file.write(f"{robot}\n")
 
 
-def call_train_script(perf_log_path, min_timesteps, env_id, ctrl_cost_weight):
+def call_train_script(perf_log_path, min_timesteps, env_id, ctrl_cost_weight, w1, w2):
 
     timesteps = str(min_timesteps)
     # print("timesteps", timesteps, type(timesteps))
@@ -110,8 +110,10 @@ def call_train_script(perf_log_path, min_timesteps, env_id, ctrl_cost_weight):
     args4= f"{timesteps}"
     args5= f"{ppo_script}"
     args6= f"{ctrl_cost_weight}"
+    args7= f"{w1}"
+    args8= f"{w2}"
     
-    result = subprocess.run(['bash', './scripts/train_ppo.sh', args1, args2, args3, args4, args5, args6], check=True)
+    result = subprocess.run(['bash', './scripts/gfn_sb3_ppo.sh', args1, args2, args3, args4, args5, args6, args7, args8], check=True)
     
     if result.returncode == 0:
         pass
@@ -230,8 +232,10 @@ class RoboGenTask(GFNTask):
         eprewmeans = []
         # start_time = time.time()
         write_robots_to_file(xml_robots)
+        w1 = 1
+        w2 = 0.002
         # print("POLICY_PATH file path", POLICY_PATH)
-        call_train_script(POLICY_PATH, min_timesteps, env_id, self.ctrl_cost_weight)
+        call_train_script(POLICY_PATH, min_timesteps, env_id, self.ctrl_cost_weight, w1, w2)
         
         no_return_value = 0.001
         valid_robots = []
@@ -520,7 +524,11 @@ def main():
     parser.add_argument("--offline_data_iters", help='iterations count for offline data collection', type=int, default=150)
     parser.add_argument("--global_batch_size", help='batch size per iteration', type=int, default=32)
     parser.add_argument("--lastbatch_rl_timesteps", help='lastbatch_rl_timesteps', type=int, default=1_000_000)
-
+    parser.add_argument("--tb_p_b_is_parameterized", help='tb_p_b_is_parameterized', type=bool, default=False)
+    parser.add_argument("--w1", help='w1', type=float, default=1)
+    parser.add_argument("--w2", help='w2', type=float, default=0.002)
+    parser.add_argument("--num_training_steps", help='num_training_steps', type=int, default=100)
+    parser.add_argument("--validate_freq", help='validate_freq', type=int, default=10)
     args = parser.parse_args()
 
     EXP_METHOD = args.exp_method
@@ -580,8 +588,8 @@ def main():
         "gum_beta": 0.0,
         "overwrite_existing_exp": True,
         "qm9_h5_path": "/data/chem/qm9/qm9.h5",
-        "num_training_steps": 500,
-        "validate_every": 100,
+        "num_training_steps": args.num_training_steps,
+        "validate_every": args.validate_freq,
         "lr_decay": 20000,
         "sampling_tau": 0.99,
         "num_data_loader_workers": 0,
@@ -598,12 +606,15 @@ def main():
         "seed": int(f"{args.seed}"),
         "offline_ratio": 0.5,
         "env_id": f"{args.env_id}",
-        "epochs": 10,
+        "epochs": 50,
         "global_batch_size": args.global_batch_size,
         "ctrl_cost_weight": 0.0005,
         "replay_buffer_size": int(args.offline_data_iters)*int(args.global_batch_size),
         "replay_buffer_warmup": int(args.offline_data_iters)*int(args.global_batch_size),
+        "tb_p_b_is_parameterized": args.tb_p_b_is_parameterized,
     }
+
+    # print("long parts, bigger depth for gap")
     
     # print("no ctrl cost")
 

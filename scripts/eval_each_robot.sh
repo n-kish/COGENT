@@ -2,8 +2,8 @@
 
 # Read the list of robots from the file
 
-if [ "$#" -ne 7 ]; then
-    echo "Usage: $0 <robot_list> <results_path> <env_id> <num_timesteps> <scripts> <ctrl_cost_weight> <expt_name>"
+if [ "$#" -ne 8 ]; then
+    echo "Usage: $0 <robot_list> <results_path> <env_id> <num_timesteps> <scripts> <ctrl_cost_weight> <expt_name> <alive_rew>"
     exit 1
 fi
 
@@ -15,7 +15,7 @@ num_timesteps="$4"
 scripts="$5"
 ctrl_cost_weight="$6"
 expt_name="$7"
-
+alive_rew="$8"
 
 echo "robots_list", $robots_list
 echo "results_path", $results_path
@@ -24,7 +24,7 @@ echo "num_timesteps", $num_timesteps
 echo "scripts", $scripts
 echo "ctrl_cost_weight", $ctrl_cost_weight
 echo "expt_name", $expt_name
-
+echo "alive_rew", $alive_rew
 # echo "This is $robots_list"
 # echo "Perf log path is $perf_log_path"
 
@@ -34,15 +34,15 @@ output_dir="$results_path/output_files"
 mkdir -p "$output_dir"
 
 # Create a temporary SLURM script with the correct output path
-tmp_slurm_script=$(mktemp /tmp/gfn_sb3_sbatch_XXXXXX.sh)
+tmp_slurm_script=$(mktemp /tmp/eval_sbatch_multiple_XXXXXX.sh)
 # echo "tmp_slurm_script is $tmp_slurm_script"
 
 while IFS= read -r robot; do
     output_file="$output_dir/$(basename "$robot").out"
-    sed "s|__OUTPUT_PATH__|$output_file|g" ./scripts/gfn_sb3_sbatch.sh > "$tmp_slurm_script"
+    sed "s|__OUTPUT_PATH__|$output_file|g" ./scripts/eval_sbatch_multiple.sh > "$tmp_slurm_script"
      
     # Submit the job
-    job_id=$(sbatch "$tmp_slurm_script" "$scripts" --xml_file_path "$robot" --results_path "$results_path" --env_id "$env_id" --ctrl_cost_weight "$ctrl_cost_weight" --num_timesteps "$num_timesteps" --expt_name "$expt_name" | awk '{print $4}')
+    job_id=$(sbatch "$tmp_slurm_script" "$scripts" --xml_file_path "$robot" --results_path "$results_path" --env_id "$env_id" --ctrl_cost_weight "$ctrl_cost_weight" --num_timesteps "$num_timesteps" --expt_name "$expt_name" --alive_rew "$alive_rew" | awk '{print $4}')
     # echo "Job id is $job_id"
     job_ids+=($job_id)
     

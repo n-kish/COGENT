@@ -37,7 +37,7 @@ NUM_ATOMIC_NUMBERS = 56  # Number of atoms used in the molecules (i.e. up to Ba)
 #     ["Body3", [0, 1, 2, 3]]
 # ]
 
-total_bodies = 25                  # Number of possible node types
+total_bodies = 625                  # Number of possible node types
 FRAGMENTS = [[f"Body{i}", [0, 1, 2, 3]] for i in range(1, total_bodies+1)]
 
     # ["Slot2", [0, 1, 2, 3]],

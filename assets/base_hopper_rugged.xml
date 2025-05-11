@@ -28,7 +28,7 @@
       </body>
     </worldbody>
     <actuator>
-      <motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200" joint="1_joint" name="1_joint"/>
+      <motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="150" joint="1_joint" name="1_joint"/>
     </actuator>
     <asset>
         <texture type="skybox" builtin="gradient" rgb1=".4 .5 .6" rgb2="0 0 0" width="100" height="100"/>
@@ -36,7 +36,7 @@
         <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
         <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
         <material name="geom" texture="texgeom" texuniform="true"/>
-        <hfield name="floor" size = "32 32 0.22 0.1" file="./assets/rugged_terrain.png"/>
+        <hfield name="floor" size = "32 32 0.175 0.1" file="./assets/rugged_terrain.png"/>
         <texture name="grid_new" type="2d" builtin="checker" rgb1=".1 .3 .2" rgb2=".2 .4 .3" width="1000" height="1000" mark="none" markrgb=".8 .6 .4"/>
         <material name="grid_new" texture="grid_new" texrepeat="0.0 0.2" texuniform="true" reflectance=".2"/>
     </asset>

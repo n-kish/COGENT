@@ -67,4 +67,4 @@ done
 
 # Clean up
 rm -f "$tmp_slurm_script"
-rm -rf "$output_dir" "$error_dir"
+# rm -rf "$output_dir" "$error_dir"

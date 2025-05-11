@@ -14,9 +14,20 @@ import scipy.stats as stats
 import torch
 import torch.nn as nn
 import torch_geometric.data as gd
+# from rdkit import RDLogger
+# from rdkit.Chem.rdchem import Mol as RDMol
 from torch import Tensor
 from torch.utils.data import Dataset
-import wandb
+#import wandb
+#wandb.login()
+import re
+import math
+import subprocess
+import xml.etree.ElementTree as ET
+
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.misc import create_logger
 from algo.flow_matching import FlowMatching
@@ -28,16 +39,100 @@ from models import bengio2021flow
 from models.graph_transformer import GraphTransformerGFN
 from train import FlatRewards, GFNTask, GFNTrainer, RewardScalar
 from utils.transforms import thermometer
+from train import cycle
+
+
+#from stable_baselines3 import PPO
+# import gymnasium as gym
+#from stable_baselines3.common.evaluation import evaluate_policy
+import fcntl
+
 
 POLICY_PATH = ""
+EXP_METHOD = ""
 
-def cycle(it):
-    while True:
-        for i in it:
-            yield i
+
+def modify_and_read_file(perf_path, robot_path):
+    rews_file_path = os.path.join(perf_path, 'rews.json')
+    modified_rews_file_path = os.path.join(perf_path, 'rew_modified.json')
+
+    # Lock and read the original file
+    with open(rews_file_path, 'r') as f:
+        fcntl.flock(f, fcntl.LOCK_SH)  # Acquire a shared lock for reading
+        content = f.read()
+        fcntl.flock(f, fcntl.LOCK_UN)  # Release the lock
+
+    # Modify the content
+    # Replace sequences of commas and newlines with a single comma
+    content = re.sub(r'[,\n]+', ',', content)
+
+    # Trim any leading or trailing commas
+    content = content.strip(',')
+
+    # Modify the content to add '[' at the start and ']' at the end
+    modified_content = '[' + content + ']'
+
+    # Lock and write the modified content to a new file
+    with open(modified_rews_file_path, 'w') as f1:
+        fcntl.flock(f1, fcntl.LOCK_EX)  # Acquire an exclusive lock for writing
+        f1.write(modified_content)
+        fcntl.flock(f1, fcntl.LOCK_UN)  # Release the lock
+
+    # Lock and read the modified JSON file
+    with open(modified_rews_file_path, 'r') as f2:
+        fcntl.flock(f2, fcntl.LOCK_SH)  # Acquire a shared lock for reading
+        modified_data = json.load(f2)
+        fcntl.flock(f2, fcntl.LOCK_UN)  # Release the lock
+
+    eprewmean = None
+    for list_elem in modified_data:
+        if robot_path in list_elem:
+            eprewmean = list_elem[robot_path]
+            break
+
+    return eprewmean
+
+def write_robots_to_file(robots, filename="robots_list.txt"):
+    with open(os.path.join(f"{POLICY_PATH}", filename), "w") as file:
+        for robot in robots:
+            file.write(f"{robot}\n")
+
+
+def call_train_script(perf_log_path, min_timesteps, env_id, ctrl_cost_weight, w1, w2):
+
+    timesteps = str(min_timesteps)
+    # print("timesteps", timesteps, type(timesteps))
+    ppo_script = f"python ./tasks/ppo_sb3_{EXP_METHOD}.py"
+
+    args1= f"{POLICY_PATH}/robots_list.txt"
+    args2= f"{perf_log_path}"
+    args3= f"{env_id}"
+    args4= f"{timesteps}"
+    args5= f"{ppo_script}"
+    args6= f"{ctrl_cost_weight}"
+    args7= f"{w1}"
+    args8= f"{w2}"
+    
+    result = subprocess.run(['bash', './scripts/gfn_sb3_ppo.sh', args1, args2, args3, args4, args5, args6, args7, args8], check=True)
+    
+    if result.returncode == 0:
+        pass
+    else:
+        print(f"train.sh execution failed with return code {result.returncode}")
+        print(f"Standard Output: {result.stdout}")
+        print(f"Standard Error: {result.stderr}")
 
 
 class RoboGenTask(GFNTask):
+    """Sets up a task where the reward is computed using a proxy for the binding energy of a molecule to
+    Soluble Epoxide Hydrolases.
+
+    The proxy is pretrained, and obtained from the original GFlowNet paper, see `gflownet.models.bengio2021flow`.
+
+    This setup essentially reproduces the results of the Trajectory Balance paper when using the TB
+    objective, or of the original paper when using Flow Matching (TODO: port to this repo).
+    """
+
     def __init__(
         self,
         log_dir,
@@ -47,14 +142,17 @@ class RoboGenTask(GFNTask):
         num_thermometer_dim: int,
         rng: np.random.Generator = None,
         wrap_model: Callable[[nn.Module], nn.Module] = None,
+        ctrl_cost_weight: float = 1.0
     ):
         self._wrap_model = wrap_model
         self.rng = rng
+        # self.models = self._load_task_models()
         self.dataset = dataset
         self.temperature_sample_dist = temperature_distribution
         self.temperature_dist_params = temperature_parameters
         self.num_thermometer_dim = num_thermometer_dim
         self.log_dir = log_dir
+        self.ctrl_cost_weight = ctrl_cost_weight
 
     def flat_reward_transform(self, y: Union[float, Tensor]) -> FlatRewards:
         return FlatRewards(torch.as_tensor(y) / 8)
@@ -65,7 +163,7 @@ class RoboGenTask(GFNTask):
     def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, Tensor]:
         beta = None
         if self.temperature_sample_dist == "constant":
-            assert isinstance(self.temperature_dist_params, float)
+            assert type(self.temperature_dist_params) is float
             beta = np.array(self.temperature_dist_params).repeat(n).astype(np.float32)
             beta_enc = torch.zeros((n, self.num_thermometer_dim))
         else:
@@ -76,6 +174,8 @@ class RoboGenTask(GFNTask):
             elif self.temperature_sample_dist == "uniform":
                 beta = self.rng.uniform(*self.temperature_dist_params, n).astype(np.float32)
                 upper_bound = self.temperature_dist_params[1]
+                # print("BETA", beta)
+                # print("upper_bound", upper_bound)
             elif self.temperature_sample_dist == "loguniform":
                 low, high = np.log(self.temperature_dist_params)
                 beta = np.exp(self.rng.uniform(low, high, n).astype(np.float32))
@@ -84,6 +184,7 @@ class RoboGenTask(GFNTask):
                 beta = self.rng.beta(*self.temperature_dist_params, n).astype(np.float32)
                 upper_bound = 1
             beta_enc = thermometer(torch.tensor(beta), self.num_thermometer_dim, 0, upper_bound)
+            # print("beta_enc", beta_enc)
 
         assert len(beta.shape) == 1, f"beta should be a 1D array, got {beta.shape}"
         return {"beta": torch.tensor(beta), "encoding": beta_enc}
@@ -99,6 +200,7 @@ class RoboGenTask(GFNTask):
 
         assert len(beta.shape) == 1, f"beta should be of shape (Batch,), got: {beta.shape}"
 
+        # TODO: positional assumption here, should have something cleaner
         preferences = steer_info[:, : len(self.objectives)].float()
         focus_dir = steer_info[:, len(self.objectives) :].float()
 
@@ -113,41 +215,78 @@ class RoboGenTask(GFNTask):
         }
 
     def cond_info_to_logreward(self, cond_info: Dict[str, Tensor], flat_reward: FlatRewards) -> RewardScalar:
+        # print("cond_info", cond_info)
+        # print("flat_reward", flat_reward)
         if isinstance(flat_reward, list):
             flat_reward = torch.tensor(flat_reward)
-        # scalar_logreward = flat_reward.squeeze().clamp(min=1e-30).log() #- original 
-        scalar_logreward = flat_reward.squeeze().clamp(min=1e-30) # - Kishan modified
+        scalar_logreward = flat_reward.squeeze().clamp(min=1e-30).log() #- original 
+        # scalar_logreward = flat_reward.squeeze().clamp(min=1e-30) # - Kishan modified
         
+        # print("scalar_logreward", flat_reward)
         assert len(scalar_logreward.shape) == len(
             cond_info["beta"].shape
         ), f"dangerous shape mismatch: {scalar_logreward.shape} vs {cond_info['beta'].shape}"
         return RewardScalar(scalar_logreward * cond_info["beta"])
 
-    def compute_flat_rewards(self, xml_robots, graphs, timesteps, env_id) -> Tuple[FlatRewards, Tensor]:
-        pred_rews = []
-        start_time = time.time()
+    def compute_flat_rewards(self, xml_robots, graphs, min_timesteps, env_id) -> Tuple[FlatRewards, Tensor]:
+        eprewmeans = []
+        # start_time = time.time()
+        write_robots_to_file(xml_robots)
+        #open hps.json file
+        with open(os.path.join(POLICY_PATH, "hps.json"), "r") as f:
+            hps = json.load(f)
 
-        optim = 5       #choosen
-        max_rew = 100
+        w1 = hps.get("w1", 1)
+        w2 = hps.get("w2", 0.002)
+        print("w1", w1)
+        # print("hps", hps)
+        # print("POLICY_PATH file path", POLICY_PATH)
+        call_train_script(POLICY_PATH, min_timesteps, env_id, self.ctrl_cost_weight, w1, w2)
         
-        for each_graph in graphs:
-            # print("nodes in graph", len(each_graph.nodes))
-            if len(each_graph.nodes) != optim:
-                reward = max_rew - 4*abs(len(each_graph.nodes) - optim)                     # 50 nodes multiple used is 2, now chnaged to 20 for 9 nodes - Kishan
-            elif len(each_graph.nodes) == optim:
-                reward = max_rew
-            else:
-                reward = 0.001
-            pred_rews.append(reward*4)
+        no_return_value = 0.001
+        valid_robots = []
 
-        print("pred_rews", pred_rews)
-        
-        is_valid = torch.tensor([i is not None for i in xml_robots]).bool()
+        for robot in xml_robots:
+            try:
+                eprewmean = modify_and_read_file(POLICY_PATH, robot)
+                if eprewmean is None:
+                    print("None as eprewmean for robot:", robot)
+                    eprewmeans.append(no_return_value)
+                    valid_robots.append(False)
+                else:
+                    eprewmeans.append(eprewmean)
+                    valid_robots.append(True)
+            except Exception as inner_e:
+                print(f"Error processing robot {robot}: {inner_e}")
+                eprewmeans.append(no_return_value)
+                valid_robots.append(False)
+
+        eprewmeans = np.array(eprewmeans)
+        eprewmeans[eprewmeans < 0] = no_return_value
+        eprewmeans = list(np.around(eprewmeans, 1))
+        print("eprewmeans", eprewmeans)
+
+        #keep track of the number of invalid robots
+        num_invalid_robots = sum(1 for v in valid_robots if not v)
+        print("Number of invalid robots:", num_invalid_robots)
+
+        valid_eprewmeans = [e for e, v in zip(eprewmeans, valid_robots) if v]
+        # print("valid_eprewmeans", valid_eprewmeans)
+        mean = np.mean(valid_eprewmeans) if valid_eprewmeans else 0
+        median = np.median(valid_eprewmeans) if valid_eprewmeans else 0
+        std = np.std(valid_eprewmeans) if valid_eprewmeans else 0
+        print("Max value & mean, median, std.dev", str(max(valid_eprewmeans)) if valid_eprewmeans else "N/A", mean, median, std)
+
+        # wandb.log({"mean": mean, "median": median, "Std.Dev": std})
+
+        is_valid = torch.tensor(valid_robots).bool()
+        # print("is_valid", is_valid)
         if not is_valid.any():
             return FlatRewards(torch.zeros((0, 1))), is_valid
-        pred_rews_arr = np.array(pred_rews)
-        preds = self.flat_reward_transform(pred_rews_arr).clip(1e-4, 100).reshape((-1, 1))
+        eprewmeans_arr = np.array(eprewmeans)
+        preds = self.flat_reward_transform(eprewmeans_arr).clip(1e-4, 1000).reshape((-1, 1))     #changed clip value from 100 to 1000 - Kishan
         return FlatRewards(preds), is_valid
+        
 
 class RoboTrainer(GFNTrainer):
     def default_hps(self) -> Dict[str, Any]:
@@ -157,7 +296,7 @@ class RoboTrainer(GFNTrainer):
             "learning_rate": 1e-4,
             "Z_learning_rate": 1e-3,
             "num_emb": 128,
-            "num_layers": 3,
+            "num_layers": 4,
             "tb_epsilon": None,
             "tb_p_b_is_parameterized": False,
             "illegal_action_logreward": -75,
@@ -172,14 +311,12 @@ class RoboTrainer(GFNTrainer):
             "Z_lr_decay": 50000,
             "clip_grad_type": "norm",
             "clip_grad_param": 10,
-            "random_action_prob": 0.3,                     # originally - 0.01, changed later to 0.05 and ran 25k horizon exp. increased to 0.1 for 100k horizon
+            "random_action_prob": 0,                     # originally - 0.01, changed later to 0.05 and ran 25k horizon exp. increased to 0.1 for 100k horizon
             "valid_random_action_prob": 0.0,
             "sampling_tau": 0.0,
             "max_nodes": 9,
             "num_thermometer_dim": 32,
             "use_replay_buffer": True,           #used to be False, changed to True - Kishan
-            "replay_buffer_size": 10000,         # changed from 10_000 to 5_000
-            "replay_buffer_warmup": 10000,
             "mp_pickle_messages": False,
             "algo": "TB",
             "num_final_gen_steps": 1
@@ -203,7 +340,8 @@ class RoboTrainer(GFNTrainer):
             rng=self.rng,
             num_thermometer_dim=self.hps["num_thermometer_dim"],
             wrap_model=self._wrap_for_mp,
-            log_dir=self.hps["log_dir"]
+            log_dir=self.hps["log_dir"],
+            ctrl_cost_weight=self.hps["ctrl_cost_weight"]
         )
 
     def setup_model(self):
@@ -216,7 +354,8 @@ class RoboTrainer(GFNTrainer):
 
     def setup(self):
         hps = self.hps
-        self.rng = np.random.default_rng(14285)
+        # RDLogger.DisableLog("rdApp.*")
+        self.rng = np.random.default_rng(self.hps["seed"])
         self.env = GraphBuildingEnv()
         self.training_data = []
         self.test_data = []
@@ -232,6 +371,7 @@ class RoboTrainer(GFNTrainer):
         self.setup_task()
         self.setup_model()
 
+        # Separate Z parameters from non-Z to allow for LR decay on the former
         Z_params = list(self.model.logZ.parameters())
         non_Z_params = [i for i in self.model.parameters() if all(id(i) != id(j) for j in Z_params)]
         self.opt = torch.optim.Adam(
@@ -282,9 +422,9 @@ class RoboTrainer(GFNTrainer):
                 b.data.mul_(self.sampling_tau).add_(a.data * (1 - self.sampling_tau))
     
     def update_max_nodes(self, iteration):
-        if iteration < 150:
+        if iteration < int(self.hps["init_data_iters"]):
             base_max_nodes = self.hps["max_nodes"] + 1
-            new_max_nodes = 3 + (iteration % (base_max_nodes - 3))
+            new_max_nodes = 2 + (iteration % (base_max_nodes - 3))
         else:
             new_max_nodes = self.hps["max_nodes"] 
         
@@ -294,16 +434,22 @@ class RoboTrainer(GFNTrainer):
         print(f"Updated max_nodes to {new_max_nodes} at iteration {iteration}")
 
     def run(self, logger=None):
+
         if logger is None:
             logger = create_logger(logfile=self.hps["log_dir"] + "/train.log")
 
         self.model.to(self.device)
         self.sampling_model.to(self.device)
-        epoch_length = max(len(self.training_data), 50)
+        epoch_length = max(len(self.training_data), 500)             # changed from 1 to 20 - Kishan
         valid_freq = self.hps.get("validate_every", 0)
+        # If checkpoint_every is not specified, checkpoint at every validation epoch
         ckpt_freq = self.hps.get("checkpoint_every", valid_freq)
+        traindl_start_time = time.time()
         train_dl = self.build_training_data_loader()   
+        print("---Built training data loader in %s seconds ---" % (time.time() - traindl_start_time))
+        # valddl_start_time = time.time()
         valid_dl = self.build_validation_data_loader()
+        # print("---Built validation data loader in %s seconds ---" % (time.time() - valddl_start_time))
 
         if self.hps.get("num_final_gen_steps", 0) > 0:
             final_dl = self.build_final_data_loader()
@@ -311,10 +457,12 @@ class RoboTrainer(GFNTrainer):
         start = self.hps.get("start_at_step", 0) + 1
         logger.info("Starting training")
 
+        train_start_time = time.time()
         train_dl_iter = cycle(train_dl)
         for it in range(start, 1 + self.hps["num_training_steps"]):
             self.update_max_nodes(it)
             batch = next(train_dl_iter)
+            #write iteration count to file
             with open(os.path.join(self.hps["log_dir"], 'counter.txt'), 'w') as f:
                 f.write(f"{it}")
 
@@ -325,7 +473,9 @@ class RoboTrainer(GFNTrainer):
                     f"iteration {it} : warming up replay buffer {len(self.replay_buffer)}/{self.replay_buffer.warmup}"
                 )
                 continue
+            start = time.time()
             info = self.train_batch(batch.to(self.device), epoch_idx, batch_idx, it)
+            # print("---Train time in %s seconds ---" % (time.time() - start))
 
             self.log(info, it, "train")
             if it % self.print_every == 0:
@@ -333,7 +483,9 @@ class RoboTrainer(GFNTrainer):
 
             if valid_freq > 0 and it % valid_freq == 0:
                 for batch in valid_dl:
+                    start_eval = time.time()
                     info = self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx)
+                    # print("---Eval time in %s seconds ---" % (time.time() - start_eval))
                     self.log(info, it, "valid")
                     logger.info(f"validation - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info.items()))
                 end_metrics = {}
@@ -342,9 +494,10 @@ class RoboTrainer(GFNTrainer):
                         c.on_validation_end(end_metrics)
                 self.log(end_metrics, it, "valid_end")
             if ckpt_freq > 0 and it % ckpt_freq == 0:
+                # print("Saving Checkpoint")
                 self._save_state(it)
         self._save_state(self.hps["num_training_steps"])
-        
+        # print("---Overall (train + validation time in %s seconds ---" % (time.time() - train_start_time))
         num_final_gen_steps = self.hps.get("num_final_gen_steps", 0)
         if num_final_gen_steps > 0:
             logger.info(f"Generating final {num_final_gen_steps} batches ...")
@@ -355,6 +508,7 @@ class RoboTrainer(GFNTrainer):
                 pass
             logger.info("Final generation steps completed.")
 
+
 def main():
     global POLICY_PATH
     global EXP_METHOD
@@ -362,38 +516,75 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument("--run_path", default="./logs")
-    parser.add_argument("--base_xml_path", type=str, default='./assets/base_ant_incline.xml')
-    parser.add_argument("--env", type=str, default='ant')
+    parser.add_argument("--base_xml_path", type=str, default='./assets/base_swimmer_flat.xml')
+    parser.add_argument("--env_id", type=str, default='Swimmer-v5')
+    parser.add_argument("--env", type=str, default='swimmer')
     parser.add_argument("--start_point", type=str, default='base')
-    parser.add_argument("--env_terrain", type=str, default='incline')
+    parser.add_argument("--env_terrain", type=str, default='flat')
     parser.add_argument("--terrain_from_external_source", type=int, default=0)
     parser.add_argument("--name", help='experiment_name', type=str, default='test')
-    parser.add_argument("--exp_method", help='experiment method', type=str, default='naive')
-    parser.add_argument("--rl_timesteps", help='rl_timesteps', type=int, default=4_000)
-    parser.add_argument("--min_steps", help='min steps for gsca', type=int, default=30000)
+    parser.add_argument("--exp_method", help='experiment method', type=str, default='GSCA')
+    # parser.add_argument("--rl_timesteps", help='rl_timesteps', type=int, default=4_000)
+    parser.add_argument("--min_steps", help='min steps for gsca', type=int, default=3000)
     parser.add_argument("--max_gfn_nodes", help='graph nodes', type=int, default=10)
-    parser.add_argument("--lastbatch_rl_timesteps", help='lastbatch_rl_timesteps', type=int, default=1_000_000)
-    parser.add_argument("--global_batch_size", help='batch size per iteration', default=32)
     parser.add_argument("--offline_data_iters", help='iterations count for offline data collection', type=int, default=150)
-
-
+    parser.add_argument("--global_batch_size", help='batch size per iteration', type=int, default=32)
+    parser.add_argument("--lastbatch_rl_timesteps", help='lastbatch_rl_timesteps', type=int, default=1_000_000)
+    parser.add_argument("--w1", help='weight for Rp', type=str, default=1)
+    parser.add_argument("--w2", help='weight for Rc', type=str, default=0.002)
+    parser.add_argument("--total_gfn_steps", help='total gfn steps', type=int, default=100)
     args = parser.parse_args()
-    
+
+    EXP_METHOD = args.exp_method
+
+    args.terrain_from_external_source = bool(args.terrain_from_external_source)
+
+    if args.terrain_from_external_source:
+        parser.add_argument("--terrain_path", type=str, default=f"./assets/{args.env_terrain}_terrain.png")
+        args = parser.parse_args()
+
+ #   wandb.init(
+    # Set the project where this run will be logged
+  #  project="robonet_tests", 
+   # name=f"{args.name}",
+   # notes="RBN+mujoco+sb3",
+   # mode="disabled",  # "disabled" or "online"
+   # tags=["1k iter", "beta_decay", "randacts0"]
+   # )
+
+
+    print("Env:", args.base_xml_path)
+    # Step 1: Create a new folder
     postfix = int(time.time())
     log_folder = "exp_{}_{}_{}".format(args.name, args.seed, postfix)
     log_folder_path = os.path.join(args.run_path, log_folder)
     os.mkdir(log_folder_path)
 
+    # Step 2: Copy the xml file to this folder
     xml_folder = "xmlrobots"
     xml_folder_path = os.path.join(log_folder_path, xml_folder)
     os.mkdir(xml_folder_path)
     shutil.copy(args.base_xml_path, os.path.join(os.path.abspath(xml_folder_path), "env.xml"))
+    if args.terrain_from_external_source:
+        shutil.copy(args.terrain_path, os.path.join(os.path.abspath(xml_folder_path), f"{args.env_terrain}_terrain.png"))
+        tree = ET.parse(os.path.join(os.path.abspath(xml_folder_path), "env.xml"))
+        root = tree.getroot()
+        # Find the hfield element and update the file attribute
+        for hfield in root.iter('hfield'):
+            hfield.set('file', (os.path.join(os.path.abspath(xml_folder_path), f"{args.env_terrain}_terrain.png")))
+
+        # Save the updated XML file
+        tree.write(os.path.join(os.path.abspath(xml_folder_path), "env.xml"))
 
     xml_path = os.path.join(os.path.abspath(xml_folder_path))
     
     policy_folder = "policies"
     POLICY_PATH = os.path.join(log_folder_path, policy_folder)
-    os.mkdir(POLICY_PATH)      
+    os.mkdir(POLICY_PATH)
+
+    videos_folder = "videos"
+    videos_folder_path = os.path.join(log_folder_path, videos_folder)
+    os.mkdir(videos_folder_path)      
 
     hps = {
         "log_dir": f"{log_folder_path}",
@@ -401,35 +592,48 @@ def main():
         "gum_beta": 0.0,
         "overwrite_existing_exp": True,
         "qm9_h5_path": "/data/chem/qm9/qm9.h5",
-        "num_training_steps": 1000,
-        "validate_every": 100,
-        "lr_decay": 20000,
+        "num_training_steps": args.total_gfn_steps,
+        "validate_every": 10,
+        "lr_decay": 1600,
         "sampling_tau": 0.99,
         "num_data_loader_workers": 0,
         "temperature_dist_params": (0.0, 64.0),
         "max_nodes": args.max_gfn_nodes,
-        "rl_timesteps": f"{args.rl_timesteps}",
+        # "rl_timesteps": f"{args.rl_timesteps}",
         "lastbatch_rl_timesteps":f"{args.lastbatch_rl_timesteps}",
         "env":f"{args.env}",
         "start_point":f"{args.start_point}",    
         "exp_method":f"{args.exp_method}",    
         "env_terrain":f"{args.env_terrain}",
         "resource_per_link":f"{args.min_steps}",
-        "init_data_iters": 10,
+        "init_data_iters": args.offline_data_iters,
         "seed": int(f"{args.seed}"),
+        "offline_ratio": 0.5,
+        "env_id": f"{args.env_id}",
         "epochs": 10,
         "global_batch_size": args.global_batch_size,
         "ctrl_cost_weight": 0.0005,
         "replay_buffer_size": int(args.offline_data_iters)*int(args.global_batch_size),
         "replay_buffer_warmup": int(args.offline_data_iters)*int(args.global_batch_size),
+        "w1": args.w1,
+        "w2": args.w2
     }
 
-    # print("32 bs, Nw size increased to 128x3, epochs = 50, changing maxnodes till 150 iterations. buffer size = 10000. Action size - 25x4, rew*4 and log removed")
+    #write hps to file
+    with open(os.path.join(POLICY_PATH, "hps.json"), "w") as f:
+        json.dump(hps, f)
+
+    # print("long parts, bigger depth for gap")
     
+    # print("no ctrl cost")
+
     trial = RoboTrainer(hps, torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
 
     trial.print_every = 1
     trial.run()
 
+
 if __name__ == "__main__":
     main()
+
+

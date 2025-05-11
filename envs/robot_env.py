@@ -771,12 +771,13 @@ def graph_to_robot_with_init_design(env_id, graph, xml_dir, log_dir, exp_method,
 
     # Allowed values for length_ratio, size, and gear
 
-    if exp_method in ["CA", "GSCA", "linearscaling"]:
+
+    if exp_method in ["CA", "GSCA", "GSCA_no_alive_rew", "linearscaling", "GSCA_no_xpos", "toy"]:
         values1 = [1, 0.95, 0.9, 1.05, 1.1]  # For length_ratio, size, gear
-        if exp_method in ["linearscaling"]:
+        if exp_method in ["linearscaling", "toy"]:
             values2 = [1]  # For resource
         else:
-            values2 = [1, 1.25, 1.5]
+            values2 = [1, 1.12, 1.25, 1.37, 1.5]
 
 
         # values1 = [1, 0.9, 0.8, 1.1, 1.2]  # For length_ratio, size, gear
@@ -784,7 +785,6 @@ def graph_to_robot_with_init_design(env_id, graph, xml_dir, log_dir, exp_method,
 
         # Generate all possible combinations of (length_ratio, size, gear) and (resource)
         combinations = list(itertools.product(values1, values1, values1, values2))
-
         # Create the node_map with unique combinations
         node_map = {
             i: {
@@ -795,14 +795,14 @@ def graph_to_robot_with_init_design(env_id, graph, xml_dir, log_dir, exp_method,
             }
             for i, comb in enumerate(combinations)
         }
-    else:    
-        values = [1, 0.9, 0.8, 1.1, 1.2]
-        # Generate all possible combinations of (length_ratio, size, gear)
-        combinations = list(itertools.product(values, repeat=2))
+    # else:    
+    #     values = [1, 0.9, 0.8, 1.1, 1.2]
+    #     # Generate all possible combinations of (length_ratio, size, gear)
+    #     combinations = list(itertools.product(values, repeat=2))
 
-        # Create the node_map with unique combinations
-        # node_map = {i: {'length_ratio': comb[0], 'size': comb[1], 'gear': comb[2]} for i, comb in enumerate(combinations)}
-        node_map = {i: {'length_ratio': comb[0], 'size': comb[1]} for i, comb in enumerate(combinations)}
+    #     # Create the node_map with unique combinations
+    #     # node_map = {i: {'length_ratio': comb[0], 'size': comb[1], 'gear': comb[2]} for i, comb in enumerate(combinations)}
+    #     node_map = {i: {'length_ratio': comb[0], 'size': comb[1]} for i, comb in enumerate(combinations)}
 
 
     # Create an adjacency list from the given nodes and edges
@@ -911,9 +911,11 @@ def graph_to_robot_with_init_design(env_id, graph, xml_dir, log_dir, exp_method,
         # print("calling redesign")
         xml_robot.redesign_bodies_with_init_design(env_id, body_list, child, attach_loc, geom_type, parent_body, length, size, gear_factor) 
 
-        if exp_method in ["CA", "GSCA", "linearscaling"]:
+        if exp_method in ["CA", "GSCA", "GSCA_no_alive_rew", "GSCA_no_xpos"]:
             resource_factor = child_node_mods['resource']
             total_resource+= resource_factor*int(min_resource)                           #/len(init_parent_bodies)
+        else:
+            total_resource+= int(min_resource)
 
 
     os.makedirs('out', exist_ok=True)
@@ -928,10 +930,13 @@ def graph_to_robot_with_init_design(env_id, graph, xml_dir, log_dir, exp_method,
     # xml_robot.write_xml(os.path.join(os.path.abspath(log_dir), f'robot_{len(nodes)}_{postfix}.xml'))
     # return os.path.join(os.path.abspath(log_dir), f'robot_{len(nodes)}_{postfix}.xml')
 
-    xml_robot.write_xml(os.path.join(os.path.abspath(log_dir), f'robot_{len(nodes)}_{str(total_resource)}_{postfix}.xml'))
+    output_path = os.path.join(os.path.abspath(log_dir), f'robot_{len(nodes)}_{str(total_resource)}_{postfix}.xml')
+
+    xml_robot.write_xml(output_path)
     if env_id == 'Hopper-v5':
-        adjust_robot_height(xml_robot)
-    return os.path.join(os.path.abspath(log_dir), f'robot_{len(nodes)}_{str(total_resource)}_{postfix}.xml')
+        adjust_robot_height(output_path)
+    # print("output_path", output_path)
+    return output_path
 
 
 def run(args2):

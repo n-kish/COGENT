@@ -6,10 +6,11 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=20G
-#SBATCH --error="/home/knagiredla/robonet/output/gfn_simtest.err"
-#SBATCH --time=150:00:00
-#SBATCH --output=/home/knagiredla/robonet/output/%j.out
-
+#SBATCH --error="/home/knagiredla/robonet/sensitivity_output/gfn_simtest.err"
+#SBATCH --time=240:00:00
+#SBATCH --output=/home/knagiredla/robonet/sensitivity_output/%j.out
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=knagiredla@deakin.edu.au
 
 
 source ~/.bashrc

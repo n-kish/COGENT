@@ -1,5 +1,10 @@
 import torch
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from models.graph_transformer import GraphTransformerGFN
+from envs.frag_mol_env import FragMolBuildingEnvContext
+from tasks.train_gfn import RoboTrainer
 
 '''
 This file uses a trained model to sample/generate robots using final_dl method of GFN.
@@ -26,25 +31,23 @@ def main():
     #     from envs.frag_mol_env import FragMolBuildingEnvContext
     #     from tasks.train_gfn import RoboTrainer
 
-    from models.graph_transformer import GraphTransformerGFN
-    from envs.frag_mol_env import FragMolBuildingEnvContext
-    from tasks.train_gfn import RoboTrainer
-
     # if exp not in ['CA', 'GSCA']:
     #     raise ValueError("exp must be either 'CA' or 'GSCA'")
 
 
     # Required Inputs based on the characteristics of the run
-    lower_bound = 750
-    upper_bound = 750
-    step_size = 100
-    path = "/home/knagiredla/robonet/logs/exp_GSCA_10_flat_base_ant_40_000_134_1731216187/policies"
+    lower_bound = 30
+    upper_bound = 100
+    step_size = 10
+    path = "/home/knagiredla/robonet/logs/exp_hoppersens_1_0.002_6_20_000_25_1745678777/policies"
+
+    # path = "/home/knagiredla/robonet/logs/exp_GSCA_5_flat_base_hopper_100_000_134_1735392360/policies"
 
     for idx in range(lower_bound, upper_bound+1, step_size):
         
         model_path = path + f"/model_state_{idx}.pt"
 
-        env_ctx = FragMolBuildingEnvContext(max_frags=10, num_cond_dim=32)
+        env_ctx = FragMolBuildingEnvContext(max_frags=6, num_cond_dim=32)
 
         # Define an instance of YourModelClass (assuming it's the class of self.model)
         model = GraphTransformerGFN(env_ctx, num_emb=128, num_layers=4)

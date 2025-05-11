@@ -24,6 +24,24 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
+class RandomXPositionWrapper(gym.Wrapper):
+    def __init__(self, env, x_min=-1.0, x_max=1.0):
+        super(RandomXPositionWrapper, self).__init__(env)
+        self.x_min = x_min
+        self.x_max = x_max
+
+    def reset(self, **kwargs):
+        # Reset the environment
+        obs = self.env.reset(**kwargs)
+        
+        # Set a random x-position
+        random_x = np.random.uniform(self.x_min, self.x_max)
+        if hasattr(self.env.unwrapped, 'sim'):
+            self.env.unwrapped.sim.data.qpos[0] = random_x  # Assuming qpos[0] corresponds to x-position
+            self.env.unwrapped.sim.forward()  # Ensure the physics engine updates
+
+        return obs
+
 def main():
     # print("Entered runppo")
 
@@ -48,6 +66,7 @@ def main():
     env_id = args.env_id
     min_steps = int(args.min_timesteps)
     robot = args.xml_file_path
+    # print("robot", robot)
 
     # Resource Allocation strategy
     # pattern = r"robot_(\d+)_"
@@ -58,7 +77,8 @@ def main():
     # Extract the information using group() method
     node_count = int(match.group(1))  # Extracts the node count
     time_steps = int(float(match.group(2)))
-    
+    # print("node_count", node_count)
+    # print("time_steps", time_steps)
     # time_scaler = node_count * 0.1
     # cost_scaler = 10* math.log((time_steps+1))
     cost_scalar = time_steps - args.min_timesteps * node_count      # calculates base timesteps and sampled timesteps difference
@@ -68,14 +88,37 @@ def main():
         net_arch=[128, 128, 128, 128]
     )
     # print("time_steps", time_steps)
+
+    
     path = args.perf_log_path
     n_envs = 4
+
+
+    # vec_env = SubprocVecEnv([
+    #     lambda i=i: Monitor(
+    #         gym.make(env_id,
+    #             xml_file=robot,
+    #             render_mode='rgb_array'),
+    #         os.path.join(path, str(i))
+    #     ) for i in range(n_envs)
+    # ])
+
+    # To randomize the x position of the robot in gap environment
     vec_env = SubprocVecEnv([
         lambda i=i: Monitor(
-            gym.make(env_id,
-                xml_file=robot,
-                render_mode='rgb_array'),
-            os.path.join(path, str(i))
+            RandomXPositionWrapper(
+                gym.make(env_id,
+                    xml_file=robot,
+                    render_mode='rgb_array',
+                    width=1920,
+                    height=1080,
+                    camera_id=0,
+                    # healthy_reward=0.5,
+                    # ctrl_cost_weight=0.000001
+                ),
+                x_min=-5.0,  # Minimum x-position
+                x_max=5.0    # Maximum x-position
+            )
         ) for i in range(n_envs)
     ])
 

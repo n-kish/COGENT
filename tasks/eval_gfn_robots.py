@@ -83,7 +83,7 @@ def write_robots_to_file(robots, robot_performances, robots_path, filename, top_
             file.write(f"{robot}\n")
 
 
-def call_train_script(robots_path, robots_list_file, num_timesteps, ctrl_cost_weight, expt_name, env_id):
+def call_train_script(robots_path, robots_list_file, num_timesteps, ctrl_cost_weight, expt_name, env_id, alive_rew):
 
     num_timesteps = str(num_timesteps)
     ctrl_cost_weight = str(ctrl_cost_weight)
@@ -99,6 +99,7 @@ def call_train_script(robots_path, robots_list_file, num_timesteps, ctrl_cost_we
     args5= f"{ppo_script}"
     args6= f"{ctrl_cost_weight}"
     args7= f"{expt_name}"
+    args8= f"{alive_rew}"
 
     print("args1", args1) 
     print("args2", args2)
@@ -110,7 +111,7 @@ def call_train_script(robots_path, robots_list_file, num_timesteps, ctrl_cost_we
 
     args6= ctrl_cost_weight
     
-    result = subprocess.run(['bash', './scripts/eval_each_robot.sh', args1, args2, args3, args4, args5, args6, args7], check=True)
+    result = subprocess.run(['bash', './scripts/eval_each_robot.sh', args1, args2, args3, args4, args5, args6, args7, args8], check=True)
     
     if result.returncode == 0:
         pass
@@ -123,13 +124,14 @@ def call_train_script(robots_path, robots_list_file, num_timesteps, ctrl_cost_we
 def main():
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--rews_path', help='Path of rews.json file', type=str)
-    parser.add_argument('--folder_path', help='Path of folder containing all sampled robots', type=str, default='./test')
+    parser.add_argument('--rews_path', help='Path of rews.json file', type=str, default=None)
+    parser.add_argument('--folder_path', help='Path of folder containing all sampled robots', type=str, default=None)
     parser.add_argument('--num_timesteps', help='Number of timesteps to train the robot for', type=int, default=500_000)
     parser.add_argument('--ctrl_cost_weight', help='Control cost weight for the robot', type=float, default=0.0005)
     parser.add_argument('--expt_name', help='Name of the experiment', type=str)
     parser.add_argument('--env_id', help='Environment ID', type=str, default="Hopper-v5")
     parser.add_argument('--results_path', help='Path of results folder', type=str, default='./test')
+    parser.add_argument('--alive_rew', help='Alive rew', type=float, default=1.0)
     args = parser.parse_args()
 
     folder_path = args.folder_path  
@@ -146,42 +148,45 @@ def main():
 
     if folder_path is not None:
         print("Path", folder_path)
-
-    # Collect Robots from given rews.json file path
-    max_eprewmean = float('-inf')  # Initialize with a very small value
-    max_dict = None
-
-    robot_list = []
-    data = []
-    # print("args.rew_path", args.rews_path)
-
-    if args.rews_path is not None:
-        robots_path = args.results_path  # Move outside the loop
-        robot_performances = {}  # Dictionary to store robot paths and their performances
+        # TODO: Collect Robots from given folder path
         
-        with open(args.rews_path, 'r') as file:
-            for line in file:
-                try:
-                    all_robots_perf = json.loads(line)
-                    for robot_dict in all_robots_perf:
-                        # Each robot_dict is like {"path/to/robot.xml": performance_value}
-                        for robot_path, performance in robot_dict.items():
-                            robot_list.append(robot_path)
-                            robot_performances[robot_path] = performance
-                except json.JSONDecodeError as e:
-                    print(f"Failed to parse JSON line: {e}")
-                    continue
-                except Exception as e:
-                    print(f"Unexpected error processing line: {e}")
-                    continue
-    else:
-        robots_path = folder_path+'/valid/'
-        robot_list = [robots_path+robot for robot in os.listdir(robots_path) if robot.endswith('.xml')]
-    # print("robots path", robots_path)
-    # time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    robots_list_file=f"gen_robots_list_{args.expt_name}.txt"
-    write_robots_to_file(robot_list, robot_performances, robots_path, robots_list_file, top_k=5)
-    call_train_script(robots_path, robots_list_file, num_timesteps=args.num_timesteps, ctrl_cost_weight=args.ctrl_cost_weight, expt_name=args.expt_name, env_id=args.env_id)
+        # Collect Robots from given folder path
+    elif args.rews_path is not None:
+        # Collect Robots from given rews.json file path
+        max_eprewmean = float('-inf')  # Initialize with a very small value
+        max_dict = None
+
+        robot_list = []
+        data = []
+        # print("args.rew_path", args.rews_path)
+
+        if args.rews_path is not None:
+            robots_path = args.results_path  # Move outside the loop
+            robot_performances = {}  # Dictionary to store robot paths and their performances
+            
+            with open(args.rews_path, 'r') as file:
+                for line in file:
+                    try:
+                        all_robots_perf = json.loads(line)
+                        for robot_dict in all_robots_perf:
+                            # Each robot_dict is like {"path/to/robot.xml": performance_value}
+                            for robot_path, performance in robot_dict.items():
+                                if ('final' in robot_path):
+                                    if 'robot_1_' not in robot_path:
+                                        robot_list.append(robot_path)
+                                        robot_performances[robot_path] = performance
+                    except json.JSONDecodeError as e:
+                        print(f"Failed to parse JSON line: {e}")
+                        continue
+                    except Exception as e:
+                        print(f"Unexpected error processing line: {e}")
+                        continue
+
+        # print("robots path", robots_path)
+        # time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        robots_list_file=f"gen_robots_list_{args.expt_name}.txt"
+        write_robots_to_file(robot_list, robot_performances, robots_path, robots_list_file, top_k=30)
+    call_train_script(robots_path, robots_list_file, num_timesteps=args.num_timesteps, ctrl_cost_weight=args.ctrl_cost_weight, expt_name=args.expt_name, env_id=args.env_id, alive_rew=args.alive_rew)
     print("out of call_train_script")
 
     # eprewmeans = []
