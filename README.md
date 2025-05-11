@@ -20,6 +20,9 @@ This repository contains the implementation of our research work "COGENT".
     <br>
 <p>
 
+
+
+
 ## 🛠️ Setup
 Let's start with python 3.10. It's recommend to create a `conda` env:
 
@@ -33,16 +36,6 @@ conda activate cogent
 ```bash
 pip install -r requirements.txt
 ```
-
-## 👀 Visualization
-
-<p align="center">
-    <br>
-    <img src="figures/[your-visualization-image].png"/>
-    <br>
-<p>
-
-[Description of visualization capabilities and results]
 
 <!-- ### (Optional) Pretrained Models
 We provide pretrained models in `[path/to/models]` for visualization.
@@ -67,8 +60,8 @@ If you find our work useful in your research, please consider citing:
 ```bibtex
 @inproceedings{
   [citation information]
-} -->
-```
+}
+``` -->
 
 ## 🏷️ License
 Please see the [license](LICENSE) for further details.
