@@ -30,25 +30,26 @@ COGENT framework can be broadly divided into two main stages, as depicted in the
 
 ## 📊 Results
 COGENT generated top-4 diverse designs in the BridgeWalker environment in EvoGym simulator.
+
 <div align="center">
   <table>
     <tr>
       <td align="center">
-        <video src="assets/videos/video1.mp4" width="100%" controls></video>
+        <img src="assets/videos/video1.gif" width="100%" alt="COGENT's Top Design 1">
         <p><em>COGENT's Top Design 1</em></p>
       </td>
       <td align="center">
-        <video src="assets/videos/video2.mp4" width="100%" controls></video>
+        <img src="assets/videos/video2.gif" width="100%" alt="COGENT's Top Design 2">
         <p><em>COGENT's Top Design 2</em></p>
       </td>
     </tr>
     <tr>
       <td align="center">
-        <video src="assets/videos/video3.mp4" width="100%" controls></video>
+        <img src="assets/videos/video3.gif" width="100%" alt="COGENT's Top Design 3">
         <p><em>COGENT's Top Design 3</em></p>
       </td>
       <td align="center">
-        <video src="assets/videos/video4.mp4" width="100%" controls></video>
+        <img src="assets/videos/video4.gif" width="100%" alt="COGENT's Top Design 4">
         <p><em>COGENT's Top Design 4</em></p>
       </td>
     </tr>
